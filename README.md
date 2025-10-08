@@ -1,6 +1,6 @@
 # 🎯 Object-Oriented Design Patterns
 
-> 10 sistemas clássicos de OOD implementados em Python para preparação de entrevistas senior
+> 10 classic OOD systems implemented in Python for senior interview preparation
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -8,146 +8,146 @@
 
 ---
 
-## 📚 Índice de Sistemas
+## 📚 System Index
 
-### ⭐ Nível 1: Sistemas Simples (Semana 1)
+### ⭐ Level 1: Simple Systems (Week 1)
 
-| # | Sistema | Patterns | Status |
+| # | System | Patterns | Status |
 |---|---------|----------|--------|
-| 01 | [Parking Lot System](./01-parking-lot) | Strategy, Factory, Singleton | 🔴 Pendente |
-| 02 | [Library Management](./02-library-management) | Repository, Observer | 🔴 Pendente |
-| 03 | [Vending Machine](./03-vending-machine) | State, Command | 🔴 Pendente |
-| 04 | [ATM System](./04-atm-system) | Chain of Responsibility, Strategy | 🔴 Pendente |
+| 01 | [Parking Lot System](./01-parking-lot) | Strategy, Factory, Singleton | 🟡 In Progress |
+| 02 | [Library Management](./02-library-management) | Repository, Observer |  🟢 Complete |
+| 03 | [Vending Machine](./03-vending-machine) | State, Command | 🔴 Pending |
+| 04 | [ATM System](./04-atm-system) | Chain of Responsibility, Strategy | 🔴 Pending |
 
-### ⭐⭐ Nível 2: Sistemas Intermediários (Semana 2)
+### ⭐⭐ Level 2: Intermediate Systems (Week 2)
 
-| # | Sistema | Patterns | Status |
+| # | System | Patterns | Status |
 |---|---------|----------|--------|
-| 05 | [Coffee Machine](./05-coffee-machine) | Builder, Decorator | 🔴 Pendente |
-| 06 | [Deck of Cards / Blackjack](./06-deck-of-cards) | Template Method, Strategy | 🔴 Pendente |
-| 07 | [Movie Ticket Booking](./07-movie-booking) | Facade, Observer | 🔴 Pendente |
+| 05 | [Coffee Machine](./05-coffee-machine) | Builder, Decorator | 🔴 Pending |
+| 06 | [Deck of Cards / Blackjack](./06-deck-of-cards) | Template Method, Strategy | 🔴 Pending |
+| 07 | [Movie Ticket Booking](./07-movie-booking) | Facade, Observer | 🔴 Pending |
 
-### ⭐⭐⭐ Nível 3: Sistemas Complexos (Semana 3)
+### ⭐⭐⭐ Level 3: Complex Systems (Week 3)
 
-| # | Sistema | Patterns | Status |
+| # | System | Patterns | Status |
 |---|---------|----------|--------|
-| 08 | [Elevator System](./08-elevator-system) | Strategy, State, SCAN | 🔴 Pendente |
-| 09 | [Uber Design](./09-uber-design) | Strategy, Observer, Matching | 🔴 Pendente |
-| 10 | [Social Network](./10-social-network) | Observer, Composite, Proxy | 🔴 Pendente |
+| 08 | [Elevator System](./08-elevator-system) | Strategy, State, SCAN | 🔴 Pending |
+| 09 | [Uber Design](./09-uber-design) | Strategy, Observer, Matching | 🔴 Pending |
+| 10 | [Social Network](./10-social-network) | Observer, Composite, Proxy | 🔴 Pending |
 
-**Legenda:** 🔴 Pendente | 🟡 Em andamento | 🟢 Completo
+**Legend:** 🔴 Pending | 🟡 In Progress | 🟢 Complete
 
 ---
 
-## 🎨 Design Patterns Cobertos
+## 🎨 Design Patterns Covered
 
-| Pattern | Categoria | Usado em | Propósito |
+| Pattern | Category | Used In | Purpose |
 |---------|-----------|----------|-----------|
-| **Strategy** | Comportamental | Parking, ATM, Elevator, Uber | Algoritmos intercambiáveis |
-| **Factory Method** | Criacional | Parking | Criação de objetos sem especificar classe exata |
-| **Singleton** | Criacional | Parking | Garantir única instância |
-| **State** | Comportamental | Vending, Elevator | Alterar comportamento baseado em estado |
-| **Observer** | Comportamental | Library, Movie, Uber, Social | Notificar dependentes de mudanças |
-| **Builder** | Criacional | Coffee | Construir objetos complexos passo a passo |
-| **Decorator** | Estrutural | Coffee | Adicionar responsabilidades dinamicamente |
-| **Repository** | Arquitetural | Library | Abstração de persistência de dados |
-| **Command** | Comportamental | Vending | Encapsular requisições como objetos |
-| **Chain of Responsibility** | Comportamental | ATM | Passar requisição por cadeia de handlers |
-| **Template Method** | Comportamental | Deck of Cards | Definir esqueleto de algoritmo |
-| **Facade** | Estrutural | Movie | Interface simplificada para subsistema |
-| **Composite** | Estrutural | Social Network | Tratar objetos individuais e composições uniformemente |
-| **Proxy** | Estrutural | Social Network | Controlar acesso a objetos |
+| **Strategy** | Behavioral | Parking, ATM, Elevator, Uber | Interchangeable algorithms |
+| **Factory Method** | Creational | Parking | Object creation without specifying exact class |
+| **Singleton** | Creational | Parking | Ensure single instance |
+| **State** | Behavioral | Vending, Elevator | Change behavior based on state |
+| **Observer** | Behavioral | Library, Movie, Uber, Social | Notify dependents of changes |
+| **Builder** | Creational | Coffee | Build complex objects step by step |
+| **Decorator** | Structural | Coffee | Add responsibilities dynamically |
+| **Repository** | Architectural | Library | Data persistence abstraction |
+| **Command** | Behavioral | Vending | Encapsulate requests as objects |
+| **Chain of Responsibility** | Behavioral | ATM | Pass request through handler chain |
+| **Template Method** | Behavioral | Deck of Cards | Define algorithm skeleton |
+| **Facade** | Structural | Movie | Simplified interface for subsystem |
+| **Composite** | Structural | Social Network | Treat individual objects and compositions uniformly |
+| **Proxy** | Structural | Social Network | Control access to objects |
 
 ---
 
-## 🛠️ Stack Técnica
+## 🛠️ Tech Stack
 
-- **Linguagem:** Python 3.11+
-- **Type Hints:** Tipagem completa com `mypy`
-- **Testes:** `pytest` com cobertura > 80%
-- **Formatação:** `black` + `isort`
+- **Language:** Python 3.11+
+- **Type Hints:** Full typing with `mypy`
+- **Testing:** `pytest` with coverage > 80%
+- **Formatting:** `black` + `isort`
 - **Linting:** `ruff`
-- **Documentação:** Markdown + diagramas Mermaid
+- **Documentation:** Markdown + Mermaid diagrams
 
 ---
 
-## 📁 Estrutura Padrão de Cada Sistema
+## 📁 Standard Structure for Each System
 
 ```
-XX-nome-sistema/
-├── README.md                 # Documentação completa do sistema
-├── design-decisions.md       # Decisões arquiteturais e trade-offs
+XX-system-name/
+├── README.md                 # Complete system documentation
+├── design-decisions.md       # Architectural decisions and trade-offs
 ├── diagrams/
-│   ├── class-diagram.md     # Diagrama de classes (Mermaid)
-│   └── sequence-diagram.md  # Diagramas de sequência
+│   ├── class-diagram.md     # Class diagram (Mermaid)
+│   └── sequence-diagram.md  # Sequence diagrams
 ├── src/
 │   ├── __init__.py
-│   ├── models.py            # Classes de domínio
-│   ├── services.py          # Lógica de negócio
-│   ├── patterns/            # Implementações de design patterns
+│   ├── models.py            # Domain classes
+│   ├── services.py          # Business logic
+│   ├── patterns/            # Design pattern implementations
 │   │   ├── __init__.py
 │   │   ├── strategy.py
 │   │   └── factory.py
-│   └── exceptions.py        # Exceções customizadas
+│   └── exceptions.py        # Custom exceptions
 ├── tests/
 │   ├── __init__.py
 │   ├── test_models.py
 │   ├── test_services.py
 │   └── test_integration.py
-└── requirements.txt         # Dependências específicas (se houver)
+└── requirements.txt         # Specific dependencies (if any)
 ```
 
 ---
 
-## 🎯 Objetivos de Aprendizado
+## 🎯 Learning Objectives
 
-- ✅ Identificar quando aplicar cada design pattern
-- ✅ Escrever código SOLID, limpo e manutenível
-- ✅ Documentar decisões arquiteturais com justificativas
-- ✅ Pensar em escalabilidade e extensibilidade
-- ✅ Dominar type hints e Python avançado
-- ✅ Praticar TDD e testes abrangentes
-- ✅ Preparar para system design interviews
+- ✅ Identify when to apply each design pattern
+- ✅ Write SOLID, clean, and maintainable code
+- ✅ Document architectural decisions with justifications
+- ✅ Think about scalability and extensibility
+- ✅ Master type hints and advanced Python
+- ✅ Practice TDD and comprehensive testing
+- ✅ Prepare for system design interviews
 
 ---
 
 ## 🚀 Quick Start
 
-### Pré-requisitos
+### Prerequisites
 
 ```bash
-python --version  # Python 3.11 ou superior
+python --version  # Python 3.11 or higher
 ```
 
-### Instalação
+### Installation
 
 ```bash
-# Clonar repositório
-git clone https://github.com/seu-username/ood-design-patterns.git
+# Clone repository
+git clone https://github.com/your-username/ood-design-patterns.git
 cd ood-design-patterns
 
-# Criar ambiente virtual
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# Instalar dependências
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### Rodar Testes
+### Run Tests
 
 ```bash
-# Todos os testes
+# All tests
 pytest
 
-# Com coverage
+# With coverage
 pytest --cov=. --cov-report=html
 
-# Teste específico
+# Specific test
 pytest 01-parking-lot/tests/ -v
 ```
 
-### Verificar Code Quality
+### Check Code Quality
 
 ```bash
 # Type checking
@@ -156,28 +156,28 @@ mypy .
 # Linting
 ruff check .
 
-# Formatação
+# Formatting
 black --check .
 isort --check .
 ```
 
 ---
 
-## 📊 Progresso Geral
+## 📊 Overall Progress
 
 ```
-Sistemas Completos: 0/10 (0%)
-Testes Escritos: 0/10 (0%)
-Documentação: 0/10 (0%)
+Complete Systems: 0/10 (0%)
+Tests Written: 0/10 (0%)
+Documentation: 0/10 (0%)
 ```
 
-**Última atualização:** 08/10/2025
+**Last updated:** 10/08/2025
 
 ---
 
-## 📖 Recursos e Referências
+## 📖 Resources and References
 
-### Livros
+### Books
 - [Head First Design Patterns](https://www.oreilly.com/library/view/head-first-design/0596007124/)
 - [Design Patterns: Elements of Reusable OO Software](https://www.amazon.com/Design-Patterns-Elements-Reusable-Object-Oriented/dp/0201633612) (Gang of Four)
 - [Clean Code](https://www.amazon.com/Clean-Code-Handbook-Software-Craftsmanship/dp/0132350882) - Robert C. Martin
@@ -187,33 +187,33 @@ Documentação: 0/10 (0%)
 - [System Design Primer](https://github.com/donnemartin/system-design-primer)
 - [Python Type Hints](https://docs.python.org/3/library/typing.html)
 
-### Vídeos
+### Videos
 - [NeetCode - Object Oriented Design Interview Questions](https://www.youtube.com/c/NeetCode)
 - [Gaurav Sen - System Design](https://www.youtube.com/c/GauravSensei)
 
 ---
 
-## 📝 Notas
+## 📝 Notes
 
-Este repositório faz parte de um plano estruturado de 45 dias para preparação de entrevistas senior backend (Outubro-Dezembro 2025). Cada sistema é desenvolvido com atenção a:
+This repository is part of a structured 45-day plan for senior backend interview preparation (October-December 2025). Each system is developed with attention to:
 
 - **SOLID Principles**
-- **Design Patterns apropriados**
+- **Appropriate Design Patterns**
 - **Type Safety** (mypy strict mode)
-- **Testabilidade** (TDD quando possível)
-- **Documentação clara**
+- **Testability** (TDD when possible)
+- **Clear documentation**
 - **Performance considerations**
 
 ---
 
-## 📫 Contato
+## 📫 Contact
 
-Se você achou este repositório útil, considere dar uma ⭐!
+If you found this repository useful, consider giving it a ⭐!
 
-Para dúvidas ou sugestões:
-- Abra uma [issue](https://github.com/seu-username/ood-design-patterns/issues)
-- Conecte-se no [LinkedIn](https://linkedin.com/in/seu-perfil)
+For questions or suggestions:
+- Open an [issue](https://github.com/your-username/ood-design-patterns/issues)
+- Connect on [LinkedIn](https://linkedin.com/in/your-profile)
 
 ---
 
-**Status:** 🚧 Em desenvolvimento ativo (Out-Dez 2025)
+**Status:** 🚧 Active development (Oct-Dec 2025)
