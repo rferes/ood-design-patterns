@@ -54,7 +54,7 @@ class Member:
         self.name = name
         self.email = email
         self.outstanding_fees: float = 0.0
-    
+
     def __eq__(self, other) -> bool:
         return isinstance(other, Member) and self.id == other.id
 
@@ -154,7 +154,7 @@ class Library:
             print("Don't have any book registered yet")
 
     def show_active_loans(self) -> None:
-        sorted_loan = sorted(self.active_loans.values(), key=lambda l: l.date_checkout)
+        sorted_loan = sorted(self.active_loans.values(), key=lambda loan: loan.date_checkout)
         print("\nLibrary's Actives loans")
         if sorted_loan:
             for index, loan in enumerate(sorted_loan, start=1):
@@ -163,7 +163,7 @@ class Library:
             print("Don't have any active loan")
 
     def show_loan_history(self) -> None:
-        sorted_loan = sorted(self.historic_loans, key=lambda l: l.date_checkout)
+        sorted_loan = sorted(self.historic_loans, key=lambda loan: loan.date_checkout)
         print("\nLibrary's Historic of loans")
         if sorted_loan:
             for index, loan in enumerate(sorted_loan, start=1):
@@ -173,19 +173,19 @@ class Library:
 
     def member_borrow_book(self, book: Book, member: Member) -> Loan:
         """Member borrow a book making a loan"""
-        
-        if book.id not in self.books:
+
+        if book and book.id not in self.books:
             raise ValueError(f"Book {book.id} dont exist in Library's Collection")
 
-        if member.id not in self.members:
+        if member and member.id not in self.members:
             raise ValueError(f"Member {member.id} dont exist in Library's Members")
 
         if book in self.active_loans:
             raise ValueError(f"Book {book.id} already borrowed")
-        
+
         qnt_loan_member = sum(1 for loan in self.active_loans.values() if loan.member.id == member.id)
         if qnt_loan_member >= self.MAX_BOOKS:
-            raise ValueError(f"Member already have borrowed {qnt_loan_member} is the limit per member" )
+            raise ValueError(f"Member already have borrowed {qnt_loan_member} is the limit per member")
 
         date_due = date.today() + timedelta(days=self.FREE_DAYS)
         loan = Loan(book, member, date_due)
@@ -207,7 +207,7 @@ class Library:
 
         return loan
 
-    def search_book(self, query:str) -> list[Book]:
+    def search_book(self, query: str) -> list[Book]:
         """Search Books for title or author"""
         query_lower = query.lower()
         matches = [
@@ -222,11 +222,11 @@ class Library:
     def __repr__(self) -> str:
         return f"Library {self.name} (Number of Books:{len(self.books)}, Number of borrow books: {len(self.active_loans)}, Number of total finish loans{len(self.historic_loans)})"
 
+
 def demon():
     print("=== Library Management System ===")
 
     library = Library("Shakespare Librarys")
-    
     book1 = Book("Title1", "Author1", "0001")
     library.add_book(book1)
     book2 = Book("Title2", "Author2", "0002")
@@ -236,7 +236,6 @@ def demon():
     book4 = Book("Title1", "Author1", "0001")
     library.add_book(book4)
 
-
     member1 = Member("Name1", "1email@gmail.com")
 
     library.add_member(member1)
@@ -245,7 +244,7 @@ def demon():
 
     library.show_books()
     library.show_members()
-    
+
     library.member_borrow_book(book1, member1)
     library.member_borrow_book(book2, member1)
     library.member_borrow_book(book3, member1)
@@ -259,6 +258,7 @@ def demon():
 
     print(library.search_book("title"))
     print(library.search_book("2"))
+
 
 if __name__ == '__main__':
     demon()
