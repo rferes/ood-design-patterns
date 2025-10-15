@@ -32,29 +32,13 @@ vm.insert_money(3.00)
 vm.select_product("A1")  # returns product + $0.50 change
 Include basic tests.
 """
-
 from __future__ import annotations
-from abc import ABC, abstractmethod
 from decimal import Decimal, ROUND_HALF_UP
+from abc import ABC, abstractmethod
 
 
 class VendingMachineError(Exception):
     """Base exception for vending machine errors"""
-    pass
-
-
-class InvalidStateError(VendingMachineError):
-    """Operation not allowed in current state"""
-    pass
-
-
-class InsufficientFundsError(VendingMachineError):
-    """Not enough money for the operation"""
-    pass
-
-
-class ProductNotFoundError(VendingMachineError):
-    """Product code doesn't exist"""
     pass
 
 
@@ -63,9 +47,30 @@ class OutOfStockError(VendingMachineError):
     pass
 
 
+class InvalidStateError(VendingMachineError):
+    """State error, invalid operation for this state"""
+    pass
+
+
+class ProductNotFoundError(VendingMachineError):
+    """Product code error, not found"""
+    pass
+
+
+class InsufficientFundsError(VendingMachineError):
+    """Balance is lower than product price"""
+    pass
+
+
+class ProductCodeAlreadyUsedError(VendingMachineError):
+    """Product with diferente name but using the same code already register, please check name and code of product"""
+    pass
+
+
 class Product:
-    """Represents a Product of vending machine"""
-    def __init__(self, name: str, price: float | str, code: str) -> None:
+    def __init__(self, name: str, price: float, code: str) -> None:
+        if price <= 0.00:
+            raise ValueError("Price need to be higher than 0.00")
         self.name = name
         self.price = Decimal(str(price)).quantize(Decimal('0.01'), ROUND_HALF_UP)
         self.code = code
@@ -80,59 +85,60 @@ class Product:
 
     def __repr__(self) -> str:
         return (
-            f"Product {self.name} "
+            f"Product: {self.name}, "
             f"(price: {self.price}, "
             f"code: {self.code})"
         )
 
 
 class Inventory:
-    """Manage product stock"""
     def __init__(self) -> None:
         self._stock: dict[Product, int] = {}
 
-    def __contains__(self, product):
-        return product in self._stock and self._stock[product] > 0
+    def __contains__(self, product) -> bool:
+        return self.has_stock(product)
 
-    def add_product(self, product: Product, quantity: int) -> None:
-        """Add product to stock"""
+    def add_product(self, product: Product, quantity: int) -> tuple[Product, int]:
+        """Add product stock to inventary"""
         if quantity <= 0:
-            raise ValueError("Quantity must be positive")
-
+            raise ValueError("Quantity of product need to be higher than 0")
+        product_in_stock = self.get_product(product.code)
+        if product_in_stock:
+            if product.name != product_in_stock.name:
+                raise ProductCodeAlreadyUsedError("Product with diferente name but using the same code already register, please check name and code of product")
         self._stock[product] = self._stock.get(product, 0) + quantity
+        return (product, self._stock[product])
 
     def get_product(self, code: str) -> Product | None:
-        """Get product data by code"""
+        """Get product from inventory using a code of product"""
         for product in self._stock:
             if product.code == code:
                 return product
         return None
 
-    def get_stock(self, product: Product) -> int:
-        """Get quantity of product in stock"""
+    def get_product_stock(self, product) -> int:
+        """Check how many itens of a product have in stock"""
         return self._stock.get(product, 0)
 
-    def has_stock(self, product: Product) -> bool:
-        """Check if has a product in stock"""
-        return self._stock.get(product, 0) > 0
+    def has_stock(self, product) -> bool:
+        """Check if have any item of product in stock"""
+        return self.get_product_stock(product) > 0
 
-    def dispense(self, product: Product) -> bool:
-        """Remove 1 item of product from stock"""
-        if self._stock.get(product, 0) > 0:
-            self._stock[product] -= 1
-            return True
-        return False
+    def dispense_product(self, product) -> tuple[Product, int]:
+        """Dispense a product from the stock to consumer"""
+        if not self.has_stock(product):
+            raise OutOfStockError(f"{product.name} ({product.code}) out of stock.")
+        self._stock[product] -= 1
+        return (product,  self._stock[product])
 
     @property
-    def total_items(self) -> int:
-        """Total quantity of all items in stock"""
+    def total_products(self) -> int:
         return sum(self._stock.values())
 
     def __repr__(self) -> str:
         return (
-            f"Inventory("
-            f"unique products={len(self._stock)}, "
-            f"total items={self.total_items})"
+            f"Inventory (Unique Products: {len(self._stock)}, "
+            f"Total Products: {self.total_products})"
         )
 
 
@@ -151,7 +157,7 @@ class State(ABC):
         pass
 
     @abstractmethod
-    def select_product(self, code: str) -> tuple[Product | None, Decimal]:
+    def select_product(self, code: str) -> tuple[Product, Decimal]:
         pass
 
     @abstractmethod
@@ -160,75 +166,73 @@ class State(ABC):
 
 
 class IdleState(State):
-    """Waiting for money"""
+    """Waiting for user interaction"""
     def insert_money(self, amount: float) -> Decimal:
-        if amount <= 0:
-            raise ValueError(f"Invalid amount: ${amount:.2f}")
-        self.machine.balance += Decimal(str(amount)).quantize(Decimal('0.01'), ROUND_HALF_UP)
+        if amount <= 0.00:
+            raise ValueError('Amount need to be higher than U$0.00')
+        self.machine.balance = Decimal(str(amount)).quantize(Decimal('0.01'), ROUND_HALF_UP)
         self.machine.state = self.machine.has_money_state
         return self.machine.balance
 
-    def select_product(self, code: str) -> tuple[Product | None, Decimal]:
-        raise InvalidStateError("You need to insert money first.")
+    def select_product(self, code: str) -> tuple[Product, Decimal]:
+        raise InvalidStateError("You need to add money first.")
 
     def cancel(self) -> Decimal:
-        raise InvalidStateError("You don't have any operation to cancel")
+        raise InvalidStateError("You don't have start yet.")
 
 
 class HasMoneyState(State):
-    """Select the product or add more money"""
+    """Waiting for user interaction"""
     def insert_money(self, amount: float) -> Decimal:
-        if amount <= 0:
-            raise ValueError(f"Invalid amount: ${amount:.2f}")
+        if amount <= 0.00:
+            raise ValueError('Amount need to be higher than U$0.00')
         self.machine.balance += Decimal(str(amount)).quantize(Decimal('0.01'), ROUND_HALF_UP)
-        self.machine.state = self.machine.has_money_state
         return self.machine.balance
 
-    def select_product(self, code: str) -> tuple[Product | None, Decimal]:
+    def select_product(self, code: str) -> tuple[Product, Decimal]:
         product = self.machine.inventory.get_product(code)
         if not product:
-            raise ProductNotFoundError("Product not found.")
+            raise ProductNotFoundError("This Product is not in inventary")
+
         if not self.machine.inventory.has_stock(product):
-            raise OutOfStockError("Product out of stock.")
+            raise OutOfStockError(f"Product {product.name} ({product.code}) out of stock.")
 
         if self.machine.balance < product.price:
-            shortage = product.price - self.machine.balance
-            raise InsufficientFundsError(f"Funds are insufficient, Need ${shortage} more.")
+            raise InsufficientFundsError(f"Insufficient funds, product {product.name} ({product.code}) price is {self.machine.balance} you need to add more U${product.price - self.machine.balance}")
 
         self.machine.state = self.machine.dispensing_state
-        self.machine.inventory.dispense(product)
+        self.machine.inventory.dispense_product(product)
         change = self.machine.balance - product.price
         self.machine.total_amount += product.price
-        self.machine.balance = Decimal(0.0)
+        self.machine.balance = Decimal('0.00')
         self.machine.state = self.machine.idle_state
-
-        return (product, change)
+        return product, change
 
     def cancel(self) -> Decimal:
-        """Cancel transaction and return money"""
-        refund = self.machine.balance
-        self.machine.balance = Decimal(0.0)
-        self.machine.state = self.machine.idle_state
-        return refund
+        money_back = self.machine.balance
+        self.machine.balance = Decimal('0.00')
+        return money_back
 
 
 class DispensingState(State):
-    """Dispensing product please wait machine process"""
+    """Waiting for user interaction"""
     def insert_money(self, amount: float) -> Decimal:
-        raise InvalidStateError("Machine are dispensing a product, please wait.")
+        raise InvalidStateError("Machine is dispensing product, please wait.")
 
-    def select_product(self, code: str) -> tuple[Product | None, Decimal]:
-        raise InvalidStateError("Machine are dispensing a product, please wait.")
+    def select_product(self, code: str) -> tuple[Product, Decimal]:
+        raise InvalidStateError("Machine is dispensing product, please wait.")
 
     def cancel(self) -> Decimal:
-        raise InvalidStateError("Machine are dispensing a product, please wait.")
+        raise InvalidStateError("Machine is dispensing product, please wait.")
 
 
 class Command(ABC):
-    """Abstract base class for commands"""
+    """
+    Abstract command class for vending machine states.
+    """
     @abstractmethod
-    def execute(self):
-        pass
+    def execute(self) -> Decimal | tuple[Product, Decimal]:
+        """Execute command"""
 
 
 class InsertMoneyCommand(Command):
@@ -242,17 +246,17 @@ class InsertMoneyCommand(Command):
 
 
 class SelectProductCommand(Command):
-    """Command to select product"""
+    """Command to select product in stock of vending machine"""
     def __init__(self, machine: VendingMachine, code: str) -> None:
         self.machine = machine
         self.code = code
 
-    def execute(self) -> tuple[Product | None, Decimal]:
+    def execute(self) -> tuple[Product, Decimal]:
         return self.machine.state.select_product(self.code)
 
 
 class CancelCommand(Command):
-    """Command to cancel transaction"""
+    """Command to cancel operation on vending machine"""
     def __init__(self, machine: VendingMachine) -> None:
         self.machine = machine
 
@@ -261,12 +265,11 @@ class CancelCommand(Command):
 
 
 class VendingMachine:
-    """Main vending machine system"""
     def __init__(self, name: str) -> None:
         self.name = name
         self.inventory: Inventory = Inventory()
-        self.balance: Decimal = Decimal(0.0)
-        self.total_amount: Decimal = Decimal(0.0)
+        self.balance: Decimal = Decimal('0.00')
+        self.total_amount: Decimal = Decimal('0.00')
 
         self.idle_state: IdleState = IdleState(self)
         self.has_money_state: HasMoneyState = HasMoneyState(self)
@@ -274,246 +277,284 @@ class VendingMachine:
         self.state: State = self.idle_state
 
     def insert_money(self, amount: float) -> Decimal:
-        """Insert money into the machine"""
         cmd = InsertMoneyCommand(self, amount)
         return cmd.execute()
 
-    def select_product(self, code: str) -> tuple[Product | None, Decimal]:
-        """
-        Select product by code.
-        Returns:
-            tuple[Product | None, float]: (product, change)
-        """
+    def select_product(self, code: str) -> tuple[Product, Decimal]:
         cmd = SelectProductCommand(self, code)
         return cmd.execute()
 
     def cancel(self) -> Decimal:
-        """
-        Cancel transaction and return money.
-        Returns:
-            float: Amount refunded
-        """
         cmd = CancelCommand(self)
         return cmd.execute()
 
     def __repr__(self) -> str:
+        state = state = (
+                'idle' if self.state == self.idle_state
+                else 'has money' if self.state == self.has_money_state
+                else 'dispensing'
+            )
         return (
-            f"Vending Machine {self.name} "
-            f"(Balance: {self.balance}, "
-            f"Total Amount: {self.total_amount}, "
-            f"{self.inventory}, "
-            f"{self.state.__class__.__name__})"
-        )
+            f"{self.name} Vending Machine "
+            f"(balance: {self.balance}, "
+            f"total amount: {self.total_amount}, "
+            f"state: {state}, "
+            f"inventory: {self.inventory})"
+            )
 
 
-def develop_test():
+def comprehensive_test():
+    """Teste completo do sistema de vending machine"""
+    
     print("=" * 60)
-    print("VENDING MACHINE SYSTEM TEST")
+    print("VENDING MACHINE SYSTEM - COMPREHENSIVE TESTS")
     print("=" * 60)
-
-    v = VendingMachine("ABC Store")
-    p1 = Product('Coca-Cola', 2.50, 'A1')
-    p2 = Product('Pepsi', 2.00, 'A2')
-    p3 = Product('Water', 1.50, 'B1')
     
-    v.inventory.add_product(p1, 3)
-    v.inventory.add_product(p2, 2)
-    v.inventory.add_product(p3, 1)
+    # ========== SETUP ==========
+    print("\n[1] SETUP - Criando máquina de venda")
+    vm = VendingMachine("ABC Store")
+    print(f"✓ Máquina criada: {vm.name}")
+    print(f"  Estado inicial: {vm}")
     
-    print(f"\n✅ Machine initialized: {v}")
-    print(f"   Initial state: {v.state.__class__.__name__}\n")
-    
-    # Test 1: Try to select product without money
-    print("TEST 1: Select product without inserting money")
-    print("-" * 60)
-    try:
-        product, change = v.select_product('A1')
-        print(f"Dispensed: {product.name}")
-        if change > 0:
-            print(f"Change: ${change:.2f}")
-    except InvalidStateError as e:
-        print(f"❌ Error caught: {e}")
-        print(f"   Current state: {v.state.__class__.__name__}")
-    
-    # Test 2: Insert valid money
-    print("\n\nTEST 2: Insert valid money")
-    print("-" * 60)
-    try:
-        msg = v.insert_money(3.00)
-        print(msg)
-        print(f"   Current state: {v.state.__class__.__name__}")
-    except Exception as e:
-        print(f"❌ Unexpected error: {e}")
-    
-    # Test 3: Buy product successfully
-    print("\n\nTEST 3: Buy product successfully (with change)")
-    print("-" * 60)
-    try:
-        product, change = v.select_product('A1')
-        print(f"✅ Product: {product.name}, Change: ${change:.2f}")
-        print(f"   State after purchase: {v.state.__class__.__name__}")
-        print(f"   Current balance: ${v.balance:.2f}")
-    except (InvalidStateError, ProductNotFoundError, OutOfStockError, InsufficientFundsError) as e:
-        print(f"❌ Error: {e}")
-    
-    # Test 4: Try to buy non-existent product
-    print("\n\nTEST 4: Non-existent product")
-    print("-" * 60)
-    try:
-        v.insert_money(5.00)
-        print(f"   Balance before attempt: ${v.balance:.2f}")
-        product, change = v.select_product('Z9')
-        print(f"Dispensed: {product.name}")
-        if change > 0:
-            print(f"Change: ${change:.2f}")
-    except ProductNotFoundError as e:
-        print(f"❌ Error caught: {e}")
-        print(f"   Balance preserved: ${v.balance:.2f}")
-        print(f"   State: {v.state.__class__.__name__}")
-    except Exception as e:
-        print(f"❌ Other error: {e}")
-    
-    # Test 5: Insufficient funds (FIXED)
-    print("\n\nTEST 5: Insufficient funds")
-    print("-" * 60)
-    try:
-        # Current balance is $5.00 (from previous test)
-        print(f"   Available balance: ${v.balance:.2f}")
-        print(f"   Trying to buy Coca-Cola (A1): $2.50")
-        
-        product, change = v.select_product('A1')
-        print(f"✅ Product: {product.name}, Change: ${change:.2f}")
-        
-        # Now try to buy another product without sufficient balance
-        print(f"\n   New balance: ${v.balance:.2f}")
-        print(f"   Trying to buy Coca-Cola (A1) again without enough money...")
-        v.insert_money(1.00)  # Insert only $1.00, insufficient for $2.50
-        product, change = v.select_product('A1')
-        print(f"Dispensed: {product.name}")
-    except InsufficientFundsError as e:
-        print(f"❌ Error caught: {e}")
-        print(f"   Current balance: ${v.balance:.2f}")
-    except Exception as e:
-        print(f"❌ Other error: {e}")
-    
-    # Test 6: Cancel transaction
-    print("\n\nTEST 6: Cancel transaction and receive refund")
-    print("-" * 60)
-    try:
-        print(f"   Balance before cancellation: ${v.balance:.2f}")
-        refund = v.cancel()
-        print(f"✅ Refund: ${refund:.2f}")
-        print(f"   State after cancellation: {v.state.__class__.__name__}")
-        print(f"   Balance after cancellation: ${v.balance:.2f}")
-    except InvalidStateError as e:
-        print(f"❌ Error: {e}")
-    
-    # Test 7: Try to cancel without inserted money
-    print("\n\nTEST 7: Try to cancel without active transaction")
-    print("-" * 60)
-    try:
-        v.cancel()
-    except InvalidStateError as e:
-        print(f"❌ Error caught: {e}")
-        print(f"   State: {v.state.__class__.__name__}")
-    
-    # Test 8: Out of stock product
-    print("\n\nTEST 8: Out of stock product")
-    print("-" * 60)
-    try:
-        # Buy all units of Water (B1)
-        print(f"   Water stock before: {v.inventory.get_stock(p3)} unit(s)")
-        v.insert_money(2.00)
-        product, change = v.select_product('B1')
-        print(f"✅ Dispensed: {product.name}, Change: ${change:.2f}")
-        print(f"   Water stock after: {v.inventory.get_stock(p3)} unit(s)")
-        
-        # Try to buy again
-        print(f"\n   Trying to buy Water again...")
-        v.insert_money(2.00)
-        product, change = v.select_product('B1')
-        print(f"Dispensed: {product.name}")
-        if change > 0:
-            print(f"Change: ${change:.2f}")
-    except OutOfStockError as e:
-        print(f"❌ Error caught: {e}")
-        print(f"   Balance preserved: ${v.balance:.2f}")
-    except Exception as e:
-        print(f"❌ Other error: {e}")
-    
-    # Test 9: Insert invalid amount (IMPROVED)
-    print("\n\nTEST 9: Insert invalid amount (negative)")
-    print("-" * 60)
-    # Clear balance first if there is any
-    if v.balance > 0:
-        try:
-            refund = v.cancel()
-            print(f"   Previous balance cancelled: ${refund:.2f}")
-        except InvalidStateError as e:
-            print(f"   No balance to cancel: {e}")
-    
-    try:
-        v.insert_money(-5.00)
-    except ValueError as e:
-        print(f"❌ Error caught: {e}")
-        print(f"   State preserved: {v.state.__class__.__name__}")
-    
-    # Test 10: Multiple money insertions
-    print("\n\nTEST 10: Multiple money insertions")
-    print("-" * 60)
-    try:
-        msg1 = v.insert_money(1.00)
-        print(msg1)
-        msg2 = v.insert_money(1.00)
-        print(msg2)
-        msg3 = v.insert_money(0.50)
-        print(msg3)
-        print(f"   State: {v.state.__class__.__name__}")
-        
-        product, change = v.select_product('A2')
-        print(f"✅ Dispensed: {product.name}, Change: ${change:.2f}")
-        print(f"   Final state: {v.state.__class__.__name__}")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-
-    # Test 11: Exact purchase (no change)
-    print("\n\nTEST 11: Purchase with exact amount (no change)")
-    print("-" * 60)
-    try:
-        print(f"   Pepsi stock: {v.inventory.get_stock(p2)} unit(s)")
-        v.insert_money(2.00)
-        print(f"   Amount inserted: $2.00 (exact price of Pepsi)")
-        
-        product, change = v.select_product('A2')
-        print(f"✅ Dispensed: {product.name}")
-        if change > 0:
-            print(f"   Change: ${change:.2f}")
-        else:
-            print(f"   No change (exact amount)")
-        print(f"   Remaining Pepsi stock: {v.inventory.get_stock(p2)} unit(s)")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-    
-    # Test 12: Check total amount collected
-    print("\n\nTEST 12: Total amount collected")
-    print("-" * 60)
-    print(f"✅ Total collected by machine: ${v.total_amount:.2f}")
-    print(f"   (Sum of all products sold)")
-
-    # Final summary
+    # ========== TESTES DE PRODUTO ==========
     print("\n" + "=" * 60)
-    print("FINAL SUMMARY")
+    print("[2] TESTES DE PRODUTO")
     print("=" * 60)
-    print(f"Machine: {v.name}")
-    print(f"State: {v.state.__class__.__name__}")
-    print(f"Current balance: ${v.balance:.2f}")
-    print(f"Total collected: ${v.total_amount:.2f}")
-    print(f"\nInventory: {v.inventory}")
-    print(f"  • Coca-Cola (A1): {v.inventory.get_stock(p1)} unit(s)")
-    print(f"  • Pepsi (A2): {v.inventory.get_stock(p2)} unit(s)")
-    print(f"  • Water (B1): {v.inventory.get_stock(p3)} unit(s)")
+    
+    print("\n[2.1] Criando produto válido")
+    try:
+        coke = Product("Coke 1L", 2.50, "A1")
+        print(f"✓ Produto criado: {coke}")
+    except Exception as e:
+        print(f"✗ Erro: {e}")
+    
+    print("\n[2.2] Tentando criar produto com preço negativo")
+    try:
+        invalid_product = Product("Invalid", -1.00, "Z1")
+        print(f"✗ FALHOU - Produto inválido foi criado!")
+    except ValueError as e:
+        print(f"✓ Erro capturado corretamente: {e}")
+    
+    print("\n[2.3] Tentando criar produto com preço zero")
+    try:
+        invalid_product = Product("Free Item", 0.00, "Z2")
+        print(f"✗ FALHOU - Produto gratuito foi criado!")
+    except ValueError as e:
+        print(f"✓ Erro capturado corretamente: {e}")
+    
+    # ========== TESTES DE INVENTÁRIO ==========
+    print("\n" + "=" * 60)
+    print("[3] TESTES DE INVENTÁRIO")
+    print("=" * 60)
+    
+    print("\n[3.1] Adicionando produtos ao inventário")
+    try:
+        product, qty = vm.inventory.add_product(Product("Coke 1L", 2.50, "A1"), 10)
+        print(f"✓ Adicionado: {product.name} ({product.code}) - Quantidade: {qty}")
+        
+        product, qty = vm.inventory.add_product(Product("Pepsi 1L", 2.30, "A2"), 5)
+        print(f"✓ Adicionado: {product.name} ({product.code}) - Quantidade: {qty}")
+        
+        product, qty = vm.inventory.add_product(Product("Water 500ml", 1.50, "B1"), 15)
+        print(f"✓ Adicionado: {product.name} ({product.code}) - Quantidade: {qty}")
+        
+        product, qty = vm.inventory.add_product(Product("Chips", 3.00, "C1"), 0)
+        print(f"✗ FALHOU - Quantidade zero foi aceita!")
+    except ValueError as e:
+        print(f"✓ Erro capturado (quantidade <= 0): {e}")
+    
+    print(f"\n  Inventário atual: {vm.inventory}")
+    
+    print("\n[3.2] Adicionando mais estoque de produto existente")
+    try:
+        product, qty = vm.inventory.add_product(Product("Coke 1L", 2.50, "A1"), 5)
+        print(f"✓ Estoque atualizado: {product.name} - Nova quantidade: {qty}")
+    except Exception as e:
+        print(f"✗ Erro: {e}")
+    
+    print("\n[3.3] Tentando adicionar produto diferente com código duplicado")
+    try:
+        product, qty = vm.inventory.add_product(Product("Sprite 1L", 2.40, "A1"), 10)
+        print(f"✗ FALHOU - Código duplicado foi aceito!")
+    except ProductCodeAlreadyUsedError as e:
+        print(f"✓ Erro capturado corretamente: {e}")
+    
+    print("\n[3.4] Verificando estoque de produtos")
+    coke = vm.inventory.get_product("A1")
+    print(f"✓ Coke em estoque: {vm.inventory.get_product_stock(coke)} unidades")
+    print(f"✓ Tem estoque de Coke? {vm.inventory.has_stock(coke)}")
+    
+    print("\n[3.5] Buscando produto inexistente")
+    inexistent = vm.inventory.get_product("Z99")
+    print(f"✓ Produto Z99: {inexistent}")
+    
+    # ========== TESTES DE ESTADOS - IDLE ==========
+    print("\n" + "=" * 60)
+    print("[4] TESTES DE ESTADO - IDLE")
+    print("=" * 60)
+    
+    print("\n[4.1] Tentando selecionar produto sem inserir dinheiro")
+    try:
+        product, change = vm.select_product("A1")
+        print(f"✗ FALHOU - Compra sem dinheiro foi permitida!")
+    except InvalidStateError as e:
+        print(f"✓ Erro capturado: {e}")
+    
+    print("\n[4.2] Tentando cancelar sem ter iniciado")
+    try:
+        refund = vm.cancel()
+        print(f"✗ FALHOU - Cancelamento sem ação foi permitido!")
+    except InvalidStateError as e:
+        print(f"✓ Erro capturado: {e}")
+    
+    print("\n[4.3] Tentando inserir valor negativo")
+    try:
+        balance = vm.insert_money(-5.00)
+        print(f"✗ FALHOU - Valor negativo foi aceito!")
+    except ValueError as e:
+        print(f"✓ Erro capturado: {e}")
+    
+    print("\n[4.4] Tentando inserir valor zero")
+    try:
+        balance = vm.insert_money(0.00)
+        print(f"✗ FALHOU - Valor zero foi aceito!")
+    except ValueError as e:
+        print(f"✓ Erro capturado: {e}")
+    
+    # ========== TESTES DE ESTADOS - HAS MONEY ==========
+    print("\n" + "=" * 60)
+    print("[5] TESTES DE ESTADO - HAS MONEY")
+    print("=" * 60)
+    
+    print("\n[5.1] Inserindo dinheiro válido")
+    try:
+        balance = vm.insert_money(5.00)
+        print(f"✓ Dinheiro inserido: ${balance}")
+        print(f"  Estado atual: {vm.state.__class__.__name__}")
+    except Exception as e:
+        print(f"✗ Erro: {e}")
+    
+    print("\n[5.2] Inserindo mais dinheiro")
+    try:
+        balance = vm.insert_money(2.00)
+        print(f"✓ Saldo atualizado: ${balance}")
+    except Exception as e:
+        print(f"✗ Erro: {e}")
+    
+    print("\n[5.3] Tentando selecionar produto inexistente")
+    try:
+        product, change = vm.select_product("Z99")
+        print(f"✗ FALHOU - Produto inexistente foi dispensado!")
+    except ProductNotFoundError as e:
+        print(f"✓ Erro capturado: {e}")
+    
+    print("\n[5.4] Cancelando transação e recebendo reembolso")
+    try:
+        refund = vm.cancel()
+        print(f"✓ Reembolso recebido: ${refund}")
+        print(f"  Saldo atual: ${vm.balance}")
+        print(f"  Estado atual: {vm.state.__class__.__name__}")
+    except Exception as e:
+        print(f"✗ Erro: {e}")
+    
+    # ========== TESTES DE COMPRA BEM-SUCEDIDA ==========
+    print("\n" + "=" * 60)
+    print("[6] TESTES DE COMPRA BEM-SUCEDIDA")
+    print("=" * 60)
+    
+    print("\n[6.1] Compra com troco")
+    try:
+        vm.insert_money(3.00)
+        product, change = vm.select_product("A1")
+        print(f"✓ Produto dispensado: {product.name}")
+        print(f"✓ Troco: ${change}")
+        print(f"  Saldo final: ${vm.balance}")
+        print(f"  Total arrecadado: ${vm.total_amount}")
+        print(f"  Estado final: {vm.state.__class__.__name__}")
+        print(f"  Estoque restante de {product.name}: {vm.inventory.get_product_stock(product)}")
+    except Exception as e:
+        print(f"✗ Erro: {e}")
+    
+    print("\n[6.2] Compra com valor exato")
+    try:
+        vm.insert_money(2.30)
+        product, change = vm.select_product("A2")
+        print(f"✓ Produto dispensado: {product.name}")
+        print(f"✓ Troco: ${change}")
+        print(f"  Total arrecadado: ${vm.total_amount}")
+    except Exception as e:
+        print(f"✗ Erro: {e}")
+    
+    print("\n[6.3] Tentando comprar com dinheiro insuficiente")
+    try:
+        vm.insert_money(1.00)
+        product, change = vm.select_product("A1")
+        print(f"✗ FALHOU - Compra com dinheiro insuficiente foi permitida!")
+    except InsufficientFundsError as e:
+        print(f"✓ Erro capturado: {e}")
+        vm.cancel()  # Limpar saldo
+    
+    # ========== TESTES DE ESTOQUE ==========
+    print("\n" + "=" * 60)
+    print("[7] TESTES DE ESTOQUE ESGOTADO")
+    print("=" * 60)
+    
+    print("\n[7.1] Esgotando estoque de Pepsi")
+    pepsi = vm.inventory.get_product("A2")
+    remaining_stock = vm.inventory.get_product_stock(pepsi)
+    print(f"  Estoque atual de Pepsi: {remaining_stock}")
+    
+    for i in range(remaining_stock):
+        try:
+            vm.insert_money(2.30)
+            product, change = vm.select_product("A2")
+            print(f"  Compra {i+1}: {product.name} dispensado")
+        except Exception as e:
+            print(f"✗ Erro na compra {i+1}: {e}")
+    
+    print(f"\n✓ Estoque de Pepsi após vendas: {vm.inventory.get_product_stock(pepsi)}")
+    
+    print("\n[7.2] Tentando comprar produto esgotado")
+    try:
+        vm.insert_money(5.00)
+        product, change = vm.select_product("A2")
+        print(f"✗ FALHOU - Produto esgotado foi dispensado!")
+    except OutOfStockError as e:
+        print(f"✓ Erro capturado: {e}")
+        vm.cancel()  # Limpar saldo
+    
+    # ========== TESTES DE MÚLTIPLAS TRANSAÇÕES ==========
+    print("\n" + "=" * 60)
+    print("[8] TESTES DE MÚLTIPLAS TRANSAÇÕES")
+    print("=" * 60)
+    
+    print("\n[8.1] Realizando 5 compras consecutivas")
+    for i in range(5):
+        try:
+            vm.insert_money(2.00)
+            product, change = vm.select_product("B1")
+            print(f"  Transação {i+1}: {product.name} - Troco: ${change}")
+        except Exception as e:
+            print(f"✗ Erro na transação {i+1}: {e}")
+    
+    print(f"\n✓ Total arrecadado pela máquina: ${vm.total_amount}")
+    print(f"✓ Estoque restante de Water: {vm.inventory.get_product_stock(vm.inventory.get_product('B1'))}")
+    
+    # ========== RESUMO FINAL ==========
+    print("\n" + "=" * 60)
+    print("[9] RESUMO FINAL")
+    print("=" * 60)
+    print(f"\n{vm}")
+    print("\nEstoque detalhado:")
+    for product in vm.inventory._stock:
+        qty = vm.inventory.get_product_stock(product)
+        status = "✓ Disponível" if qty > 0 else "✗ Esgotado"
+        print(f"  {status} - {product.name} ({product.code}): {qty} unidades - ${product.price}")
+    
+    print("\n" + "=" * 60)
+    print("TODOS OS TESTES CONCLUÍDOS!")
     print("=" * 60)
 
 
-if __name__ == '__main__':
-    develop_test()
+if __name__ == "__main__":
+    comprehensive_test()
