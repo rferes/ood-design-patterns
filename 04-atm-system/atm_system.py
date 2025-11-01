@@ -10,9 +10,6 @@ Requirements:
 Design Patterns:
 - Chain of Responsibility: Validation pipeline for transactions
 - Strategy: Different transaction execution strategies
-
-Author: [Your Name]
-Version: 3.0 - Refactored to return only Decimal
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
